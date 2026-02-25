@@ -1,0 +1,6 @@
+type: iceberg
+warehouse: /data/output/iceberg
+catalog_type: hadoop
+catalog_properties:
+  warehouse: /data/output/iceberg
+table_namespace: cdc_db

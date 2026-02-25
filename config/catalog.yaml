@@ -1,0 +1,12 @@
+streams:
+  - table: public.users
+    sync_mode: full_load+cdc
+    primary_key:
+      - id
+    destination_table: users
+
+  - table: public.orders
+    sync_mode: full_load+cdc
+    primary_key:
+      - order_id
+    destination_table: orders

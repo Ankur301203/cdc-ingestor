@@ -1,0 +1,5 @@
+type: parquet
+base_path: /data/output/parquet
+file_size_mb: 256
+compression: SNAPPY
+row_group_size_mb: 128

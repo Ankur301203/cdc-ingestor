@@ -1,0 +1,12 @@
+type: postgres
+host: localhost
+port: 5432
+database: cdc_db
+username: postgres
+password: postgres
+schemas:
+  - public
+replication:
+  slot_name: cdc_ingestor_slot
+  publication_name: cdc_ingestor_pub
+  output_plugin: pgoutput

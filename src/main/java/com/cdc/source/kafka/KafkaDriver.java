@@ -6,7 +6,11 @@ import com.cdc.protocol.OperationType;
 import com.cdc.protocol.Record;
 import com.cdc.protocol.Writer;
 import com.cdc.protocol.schema.CdcSchema;
+import com.cdc.protocol.schema.Column;
+import com.cdc.protocol.schema.CdcType;
 import com.cdc.state.SyncState;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -16,6 +20,7 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
@@ -23,9 +28,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class KafkaDriver implements Driver {
     private static final Logger log = LoggerFactory.getLogger(KafkaDriver.class);
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private SourceConfig config;
     private List<CdcSchema> schemas;
@@ -55,6 +62,10 @@ public class KafkaDriver implements Driver {
         String topic = schema.schemaName();
         String destinationTable = schema.tableName();
         String streamId = schema.fullTableName();
+        List<Column> payloadColumns = schema.columns().stream()
+            .filter(c -> !c.name().startsWith("_kafka_"))
+            .filter(c -> !"_payload".equals(c.name()))
+            .collect(Collectors.toList());
 
         if (config.getBootstrapServers() == null || config.getBootstrapServers().isBlank()) {
             throw new IllegalArgumentException("bootstrap_servers is required for kafka source");
@@ -107,6 +118,18 @@ public class KafkaDriver implements Driver {
                     data.put("_kafka_key", rec.key());
                     data.put("_kafka_timestamp_ms", rec.timestamp());
                     data.put("_payload", rec.value());
+
+                    if (!payloadColumns.isEmpty() && rec.value() != null && !rec.value().isBlank()) {
+                        try {
+                            JsonNode root = MAPPER.readTree(rec.value());
+                            for (Column col : payloadColumns) {
+                                JsonNode node = root != null ? root.get(col.name()) : null;
+                                data.put(col.name(), convertJson(node, col.type()));
+                            }
+                        } catch (Exception e) {
+                            log.warn("Failed to parse JSON payload; leaving normalized columns null. error={}", e.getMessage());
+                        }
+                    }
 
                     Instant ts = rec.timestamp() > 0 ? Instant.ofEpochMilli(rec.timestamp()) : Instant.now();
                     Record out = new Record(destinationTable, OperationType.INSERT, data, null, rec.offset(), ts);
@@ -184,6 +207,21 @@ public class KafkaDriver implements Driver {
             log.warn("Failed to close Kafka consumer cleanly: {}", e.getMessage());
         }
         consumer = null;
+    }
+
+    private Object convertJson(JsonNode node, CdcType type) {
+        if (node == null || node.isNull()) return null;
+        return switch (type) {
+            case INT32 -> node.isNumber() ? node.intValue() : Integer.parseInt(node.asText());
+            case INT64 -> node.isNumber() ? node.longValue() : Long.parseLong(node.asText());
+            case FLOAT -> node.isNumber() ? node.floatValue() : Float.parseFloat(node.asText());
+            case DOUBLE -> node.isNumber() ? node.doubleValue() : Double.parseDouble(node.asText());
+            case BOOLEAN -> node.isBoolean() ? node.booleanValue() : Boolean.parseBoolean(node.asText());
+            case DECIMAL -> new BigDecimal(node.asText());
+            case JSON, ARRAY -> node.toString();
+            // Keep these as strings; IcebergWriter will parse for temporal types if needed.
+            case DATE, TIME, TIMESTAMP, TIMESTAMP_TZ, STRING, UUID, BYTES -> node.asText();
+        };
     }
 
     @Override

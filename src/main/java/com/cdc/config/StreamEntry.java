@@ -16,6 +16,12 @@ public class StreamEntry {
     @JsonProperty("sync_mode")
     private String syncMode = "full_load+cdc";
 
+    @JsonProperty("normalize_payload")
+    private boolean normalizePayload;
+
+    @JsonProperty("payload_columns")
+    private List<PayloadColumnConfig> payloadColumns = List.of();
+
     @JsonProperty("cursor_field")
     private String cursorField;
 
@@ -50,6 +56,10 @@ public class StreamEntry {
     public void setSourceTopic(String sourceTopic) { this.sourceTopic = sourceTopic; }
     public String getSyncMode() { return syncMode; }
     public void setSyncMode(String syncMode) { this.syncMode = syncMode; }
+    public boolean isNormalizePayload() { return normalizePayload; }
+    public void setNormalizePayload(boolean normalizePayload) { this.normalizePayload = normalizePayload; }
+    public List<PayloadColumnConfig> getPayloadColumns() { return payloadColumns; }
+    public void setPayloadColumns(List<PayloadColumnConfig> payloadColumns) { this.payloadColumns = payloadColumns; }
     public String getCursorField() { return cursorField; }
     public void setCursorField(String cursorField) { this.cursorField = cursorField; }
     public List<String> getPrimaryKey() { return primaryKey; }

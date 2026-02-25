@@ -2,4 +2,12 @@ streams:
   - table: events
     source_topic: my-topic
     sync_mode: cdc
-
+    # If omitted or empty, payload stays as raw JSON string in `_payload`.
+    normalize_payload: true
+    payload_columns:
+      - name: user_id
+        type: INT64
+      - name: event_type
+        type: STRING
+      - name: created_at
+        type: TIMESTAMP_TZ

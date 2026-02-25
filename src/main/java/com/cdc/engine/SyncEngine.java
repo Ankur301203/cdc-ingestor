@@ -174,7 +174,7 @@ public class SyncEngine {
         }
 
         String destinationTable = entry.getEffectiveDestinationTable();
-        CdcSchema schema = KafkaSchemas.forTopic(entry.getSourceTopic(), destinationTable);
+        CdcSchema schema = KafkaSchemas.forTopic(entry.getSourceTopic(), destinationTable, entry);
 
         Driver driver = SourceDriverFactory.forConfig(sourceConfig);
         driver.init(sourceConfig, List.of(schema));

@@ -2,9 +2,10 @@ package com.cdc.cli;
 
 import com.cdc.config.ConfigLoader;
 import com.cdc.config.SourceConfig;
+import com.cdc.protocol.Connector;
 import com.cdc.protocol.schema.CdcSchema;
 import com.cdc.protocol.schema.Column;
-import com.cdc.source.postgres.PostgresConnector;
+import com.cdc.source.SourceConnectorFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import picocli.CommandLine.Command;
@@ -23,7 +24,7 @@ public class DiscoverCommand implements Runnable {
     public void run() {
         try {
             SourceConfig config = ConfigLoader.loadSource(sourcePath);
-            PostgresConnector connector = new PostgresConnector();
+            Connector connector = SourceConnectorFactory.forConfig(config);
             List<CdcSchema> schemas = connector.discover(config);
 
             // Output as JSON

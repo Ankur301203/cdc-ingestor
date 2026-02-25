@@ -1,6 +1,7 @@
 package com.cdc.cli;
 
-import com.cdc.source.postgres.PostgresConnector;
+import com.cdc.protocol.Connector;
+import com.cdc.source.SourceConnectorFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
@@ -10,11 +11,14 @@ public class SpecCommand implements Runnable {
     @Option(names = "--type", required = true, description = "Config type: source or destination")
     private String type;
 
+    @Option(names = "--source-type", description = "When --type=source: source type (postgres or kafka)", defaultValue = "postgres")
+    private String sourceType;
+
     @Override
     public void run() {
         switch (type.toLowerCase()) {
             case "source" -> {
-                PostgresConnector connector = new PostgresConnector();
+                Connector connector = SourceConnectorFactory.forType(sourceType);
                 System.out.println(connector.spec());
             }
             case "destination" -> {

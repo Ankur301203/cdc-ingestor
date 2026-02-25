@@ -8,6 +8,8 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class SourceConfig {
     private String type = "postgres";
+
+    // postgres
     private String host = "localhost";
     private int port = 5432;
     private String database;
@@ -15,6 +17,21 @@ public class SourceConfig {
     private String password;
     private List<String> schemas = List.of("public");
     private ReplicationConfig replication = new ReplicationConfig();
+
+    // kafka
+    @JsonProperty("bootstrap_servers")
+    private String bootstrapServers;
+
+    @JsonProperty("group_id")
+    private String groupId = "cdc-ingestor";
+
+    private List<String> topics = List.of();
+
+    @JsonProperty("auto_offset_reset")
+    private String autoOffsetReset = "latest";
+
+    @JsonProperty("poll_timeout_ms")
+    private int pollTimeoutMs = 1000;
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class ReplicationConfig {
@@ -60,4 +77,15 @@ public class SourceConfig {
     public void setSchemas(List<String> schemas) { this.schemas = schemas; }
     public ReplicationConfig getReplication() { return replication; }
     public void setReplication(ReplicationConfig replication) { this.replication = replication; }
+
+    public String getBootstrapServers() { return bootstrapServers; }
+    public void setBootstrapServers(String bootstrapServers) { this.bootstrapServers = bootstrapServers; }
+    public String getGroupId() { return groupId; }
+    public void setGroupId(String groupId) { this.groupId = groupId; }
+    public List<String> getTopics() { return topics; }
+    public void setTopics(List<String> topics) { this.topics = topics; }
+    public String getAutoOffsetReset() { return autoOffsetReset; }
+    public void setAutoOffsetReset(String autoOffsetReset) { this.autoOffsetReset = autoOffsetReset; }
+    public int getPollTimeoutMs() { return pollTimeoutMs; }
+    public void setPollTimeoutMs(int pollTimeoutMs) { this.pollTimeoutMs = pollTimeoutMs; }
 }

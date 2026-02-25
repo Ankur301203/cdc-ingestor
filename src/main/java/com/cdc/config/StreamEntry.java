@@ -10,6 +10,9 @@ import java.util.List;
 public class StreamEntry {
     private String table;
 
+    @JsonProperty("source_topic")
+    private String sourceTopic;
+
     @JsonProperty("sync_mode")
     private String syncMode = "full_load+cdc";
 
@@ -43,6 +46,8 @@ public class StreamEntry {
     // Getters and setters
     public String getTable() { return table; }
     public void setTable(String table) { this.table = table; }
+    public String getSourceTopic() { return sourceTopic; }
+    public void setSourceTopic(String sourceTopic) { this.sourceTopic = sourceTopic; }
     public String getSyncMode() { return syncMode; }
     public void setSyncMode(String syncMode) { this.syncMode = syncMode; }
     public String getCursorField() { return cursorField; }

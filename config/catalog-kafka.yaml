@@ -1,0 +1,5 @@
+streams:
+  - table: events
+    source_topic: my-topic
+    sync_mode: cdc
+

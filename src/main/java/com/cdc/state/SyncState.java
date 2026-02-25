@@ -34,6 +34,9 @@ public class SyncState {
         @JsonProperty("last_sync_time")
         private Instant lastSyncTime;
 
+        @JsonProperty("kafka_offsets")
+        private Map<String, Map<Integer, Long>> kafkaOffsets = new HashMap<>();
+
         public String getSyncMode() { return syncMode; }
         public void setSyncMode(String syncMode) { this.syncMode = syncMode; }
         public String getLastLsn() { return lastLsn; }
@@ -46,6 +49,8 @@ public class SyncState {
         public void setFullLoadChunksTotal(int fullLoadChunksTotal) { this.fullLoadChunksTotal = fullLoadChunksTotal; }
         public Instant getLastSyncTime() { return lastSyncTime; }
         public void setLastSyncTime(Instant lastSyncTime) { this.lastSyncTime = lastSyncTime; }
+        public Map<String, Map<Integer, Long>> getKafkaOffsets() { return kafkaOffsets; }
+        public void setKafkaOffsets(Map<String, Map<Integer, Long>> kafkaOffsets) { this.kafkaOffsets = kafkaOffsets; }
     }
 
     public StreamState getOrCreateStream(String tableName) {

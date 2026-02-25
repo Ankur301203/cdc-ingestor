@@ -1,0 +1,6 @@
+type: kafka
+bootstrap_servers: localhost:9092
+group_id: cdc-ingestor
+auto_offset_reset: latest
+poll_timeout_ms: 1000
+

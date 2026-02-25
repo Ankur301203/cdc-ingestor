@@ -6,12 +6,14 @@ import com.cdc.config.SourceConfig;
 import com.cdc.config.StreamEntry;
 import com.cdc.destination.iceberg.IcebergWriter;
 import com.cdc.destination.parquet.CdcParquetWriter;
+import com.cdc.protocol.Connector;
 import com.cdc.protocol.Driver;
 import com.cdc.protocol.SyncMode;
 import com.cdc.protocol.Writer;
 import com.cdc.protocol.schema.CdcSchema;
-import com.cdc.source.postgres.PostgresConnector;
-import com.cdc.source.postgres.PostgresDriver;
+import com.cdc.source.SourceConnectorFactory;
+import com.cdc.source.SourceDriverFactory;
+import com.cdc.source.kafka.KafkaSchemas;
 import com.cdc.state.StateManager;
 import com.cdc.state.SyncState;
 import org.slf4j.Logger;
@@ -51,8 +53,17 @@ public class SyncEngine {
                 state = new SyncState();
             }
 
+            String sourceType = sourceConfig.getType() != null ? sourceConfig.getType().trim().toLowerCase() : "postgres";
+            if ("kafka".equals(sourceType)) {
+                runKafka(state);
+                stateManager.save();
+                long duration = System.currentTimeMillis() - startTime;
+                log.info("Sync completed in {}ms", duration);
+                return;
+            }
+
             // Discover schemas
-            PostgresConnector connector = new PostgresConnector();
+            Connector connector = SourceConnectorFactory.forConfig(sourceConfig);
             List<CdcSchema> allSchemas = connector.discover(sourceConfig);
             log.info("Discovered {} tables", allSchemas.size());
 
@@ -78,7 +89,7 @@ public class SyncEngine {
                 .collect(Collectors.toMap(StreamEntry::getTable, e -> e));
 
             // Initialize driver
-            PostgresDriver driver = new PostgresDriver();
+            Driver driver = SourceDriverFactory.forConfig(sourceConfig);
             driver.init(sourceConfig, targetSchemas);
 
             try {
@@ -140,6 +151,44 @@ public class SyncEngine {
                 log.error("Failed to save state after error", saveErr);
             }
             throw new RuntimeException("Sync failed", e);
+        }
+    }
+
+    private void runKafka(SyncState state) throws Exception {
+        List<StreamEntry> streams = catalogConfig.getStreams() != null ? catalogConfig.getStreams() : List.of();
+        if (streams.isEmpty()) {
+            log.warn("No streams configured in catalog for kafka source");
+            return;
+        }
+        if (streams.size() != 1) {
+            throw new IllegalArgumentException("Kafka source currently supports exactly 1 stream (one topic -> one destination table)");
+        }
+
+        StreamEntry entry = streams.get(0);
+        if (entry.getSourceTopic() == null || entry.getSourceTopic().isBlank()) {
+            throw new IllegalArgumentException("Kafka stream requires catalog entry field 'source_topic'");
+        }
+        SyncMode mode = entry.parseSyncMode();
+        if (mode != SyncMode.CDC) {
+            throw new IllegalArgumentException("Kafka source currently supports only sync_mode=cdc");
+        }
+
+        String destinationTable = entry.getEffectiveDestinationTable();
+        CdcSchema schema = KafkaSchemas.forTopic(entry.getSourceTopic(), destinationTable, entry);
+
+        Driver driver = SourceDriverFactory.forConfig(sourceConfig);
+        driver.init(sourceConfig, List.of(schema));
+
+        try {
+            Writer writer = createWriter();
+            try {
+                writer.open(schema, destinationConfig);
+                driver.cdcStream(List.of(schema), writer, state, () -> {});
+            } finally {
+                writer.close();
+            }
+        } finally {
+            driver.close();
         }
     }
 

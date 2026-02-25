@@ -24,6 +24,7 @@
         <junit.version>5.10.1</junit.version>
         <iceberg.version>1.4.3</iceberg.version>
         <picocli.version>4.7.5</picocli.version>
+        <kafka.version>3.7.0</kafka.version>
     </properties>
 
     <dependencies>
@@ -100,6 +101,13 @@
             <groupId>info.picocli</groupId>
             <artifactId>picocli</artifactId>
             <version>${picocli.version}</version>
+        </dependency>
+
+        <!-- Kafka -->
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+            <version>${kafka.version}</version>
         </dependency>
 
         <!-- Apache Iceberg -->

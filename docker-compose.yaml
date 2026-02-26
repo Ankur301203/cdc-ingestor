@@ -55,20 +55,7 @@ services:
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
-    healthcheck:
-      test: [ "CMD", "bash", "-c", "nc -z localhost 29092" ]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-  kowl:
-    image: quay.io/cloudhut/kowl:latest
-    container_name: kowl
-    ports:
-      - "8081:8080"
-    environment:
-      KAFKA_BROKERS: kafka:29092
-    depends_on:
-      - kafka
+      DYNAMIC_CONFIG_ENABLED: true
 
 volumes:
   postgres_data:

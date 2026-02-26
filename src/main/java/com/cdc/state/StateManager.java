@@ -36,10 +36,17 @@ public class StateManager {
         return state;
     }
 
+    public void setState(SyncState state) {
+        this.state = state;
+    }
+
     public void save() throws IOException {
         // Atomic write: write to temp file then rename
         Path tempPath = statePath.resolveSibling(statePath.getFileName() + ".tmp");
-        Files.createDirectories(statePath.getParent());
+        Path parent = statePath.getParent();
+        if (parent != null) {
+            Files.createDirectories(parent);
+        }
         MAPPER.writeValue(tempPath.toFile(), state);
         Files.move(tempPath, statePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         log.debug("State saved to {}", statePath);

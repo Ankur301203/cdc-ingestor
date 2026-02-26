@@ -8,6 +8,7 @@ import com.cdc.engine.SyncEngine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 @Command(name = "sync", description = "Run data synchronization (Full Load and/or CDC)")
@@ -31,6 +32,10 @@ public class SyncCommand implements Runnable {
     @Override
     public void run() {
         try {
+            if (Files.exists(statePath) && Files.isDirectory(statePath)) {
+                throw new IllegalArgumentException("--state must be a file path, not a directory: " + statePath);
+            }
+
             SourceConfig sourceConfig = ConfigLoader.loadSource(sourcePath);
             DestinationConfig destConfig = ConfigLoader.loadDestination(destinationPath);
             CatalogConfig catalogConfig = ConfigLoader.loadCatalog(catalogPath);

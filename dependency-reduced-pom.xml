@@ -135,6 +135,7 @@
     <logback.version>1.4.14</logback.version>
     <maven.compiler.source>17</maven.compiler.source>
     <parquet.version>1.13.1</parquet.version>
+    <kafka.version>3.7.0</kafka.version>
     <maven.compiler.target>17</maven.compiler.target>
     <iceberg.version>1.4.3</iceberg.version>
     <postgresql.version>42.7.1</postgresql.version>

@@ -1,6 +1,6 @@
 streams:
   - table: events
-    source_topic: my-topic
+    source_topic: test-topic
     sync_mode: cdc
     # If omitted or empty, payload stays as raw JSON string in `_payload`.
     normalize_payload: true

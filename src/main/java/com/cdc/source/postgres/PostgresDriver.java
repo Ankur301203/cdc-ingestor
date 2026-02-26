@@ -101,7 +101,7 @@ public class PostgresDriver implements Driver {
     }
 
     @Override
-    public void cdcStream(List<CdcSchema> schemas, Writer writer, SyncState state, Runnable shutdownSignal) {
+    public void cdcStream(List<CdcSchema> schemas, Writer writer, SyncState state, Runnable checkpointCallback) {
         log.info("Starting CDC stream for {} tables", schemas.size());
 
         try {
@@ -184,6 +184,7 @@ public class PostgresDriver implements Driver {
                                 state.getOrCreateStream(table).setLastSyncTime(Instant.now());
                                 state.getOrCreateStream(table).setSyncMode("cdc");
                             }
+                            if (checkpointCallback != null) checkpointCallback.run();
                         }
                         default -> {} // BEGIN, RELATION, TRUNCATE, UNKNOWN
                     }

@@ -2,6 +2,7 @@ package com.cdc;
 
 import com.cdc.cli.CheckCommand;
 import com.cdc.cli.DiscoverCommand;
+import com.cdc.cli.ProduceKafkaCommand;
 import com.cdc.cli.SpecCommand;
 import com.cdc.cli.SyncCommand;
 import picocli.CommandLine;
@@ -16,7 +17,8 @@ import picocli.CommandLine.Command;
         SpecCommand.class,
         CheckCommand.class,
         DiscoverCommand.class,
-        SyncCommand.class
+        SyncCommand.class,
+        ProduceKafkaCommand.class
     }
 )
 public class Main implements Runnable {

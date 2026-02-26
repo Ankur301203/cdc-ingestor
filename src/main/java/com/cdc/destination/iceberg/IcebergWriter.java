@@ -40,6 +40,7 @@ public class IcebergWriter implements Writer {
     private final List<DataFile> dataFiles = new ArrayList<>();
     private final List<GenericRecord> buffer = new ArrayList<>();
     private long recordsWritten;
+    private long currentFileRecords;
     private int fileSeq;
 
     @Override
@@ -48,6 +49,7 @@ public class IcebergWriter implements Writer {
         this.config = config;
         this.recordsWritten = 0;
         this.fileSeq = 0;
+        this.currentFileRecords = 0;
 
         // Convert schema
         IcebergSchemaConverter converter = new IcebergSchemaConverter();
@@ -58,13 +60,11 @@ public class IcebergWriter implements Writer {
         TableIdentifier tableId = TableIdentifier.of(
             Namespace.of(config.getTableNamespace()), schema.tableName());
 
-        if (catalog instanceof org.apache.iceberg.hadoop.HadoopCatalog hadoopCatalog) {
-            if (!hadoopCatalog.tableExists(tableId)) {
-                log.info("Creating Iceberg table: {}", tableId);
-                this.table = hadoopCatalog.createTable(tableId, icebergSchema);
-            } else {
-                this.table = hadoopCatalog.loadTable(tableId);
-            }
+        if (!catalog.tableExists(tableId)) {
+            log.info("Creating Iceberg table: {}", tableId);
+            this.table = catalog.createTable(tableId, icebergSchema);
+        } else {
+            this.table = catalog.loadTable(tableId);
         }
 
         openNewDataWriter();
@@ -91,14 +91,14 @@ public class IcebergWriter implements Writer {
     @Override
     public void flush() {
         flushBuffer();
-        commitDataWriter();
+        rotateDataWriter();
         commitTransaction();
     }
 
     @Override
     public void close() {
         flushBuffer();
-        commitDataWriter();
+        closeCurrentDataWriter();
         commitTransaction();
         log.info("Iceberg writer closed. Total records: {}", recordsWritten);
     }
@@ -108,18 +108,44 @@ public class IcebergWriter implements Writer {
         for (GenericRecord record : buffer) {
             dataWriter.write(record);
             recordsWritten++;
+            currentFileRecords++;
         }
         buffer.clear();
     }
 
-    private void commitDataWriter() {
+    private void rotateDataWriter() {
         if (dataWriter == null) return;
+        if (currentFileRecords == 0) return;
         try {
             dataWriter.close();
             dataFiles.add(dataWriter.toDataFile());
+            currentFileRecords = 0;
             openNewDataWriter();
         } catch (IOException e) {
             throw new RuntimeException("Failed to close Iceberg data writer", e);
+        }
+    }
+
+    private void closeCurrentDataWriter() {
+        if (dataWriter == null) return;
+        if (currentFileRecords == 0) {
+            try {
+                dataWriter.close();
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to close Iceberg data writer", e);
+            } finally {
+                dataWriter = null;
+            }
+            return;
+        }
+        try {
+            dataWriter.close();
+            dataFiles.add(dataWriter.toDataFile());
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to close Iceberg data writer", e);
+        } finally {
+            dataWriter = null;
+            currentFileRecords = 0;
         }
     }
 
@@ -143,7 +169,9 @@ public class IcebergWriter implements Writer {
                 table.location() + "/data/" + filename);
 
             dataWriter = Parquet.writeData(outputFile)
+                .forTable(table)
                 .schema(icebergSchema)
+                .withSpec(table.spec())
                 .createWriterFunc(GenericParquetWriter::buildWriter)
                 .overwrite()
                 .build();

@@ -32,7 +32,9 @@ public class KafkaConnector implements Connector {
                 "group_id": { "type": "string", "default": "cdc-ingestor" },
                 "topics": { "type": "array", "items": { "type": "string" }, "description": "Optional: limit discovery to these topics" },
                 "auto_offset_reset": { "type": "string", "enum": ["latest", "earliest"], "default": "latest" },
-                "poll_timeout_ms": { "type": "integer", "default": 1000 }
+                "poll_timeout_ms": { "type": "integer", "default": 1000 },
+                "checkpoint_interval_ms": { "type": "integer", "default": 5000, "description": "How often to flush/commit and update state" },
+                "checkpoint_records": { "type": "integer", "default": 10000, "description": "Flush/commit after this many records" }
               }
             }
             """;
@@ -89,4 +91,3 @@ public class KafkaConnector implements Connector {
         }
     }
 }
-

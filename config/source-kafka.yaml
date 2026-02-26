@@ -3,4 +3,6 @@ bootstrap_servers: localhost:9092
 group_id: cdc-ingestor
 auto_offset_reset: latest
 poll_timeout_ms: 1000
+checkpoint_interval_ms: 30000
+checkpoint_records: 50000
 

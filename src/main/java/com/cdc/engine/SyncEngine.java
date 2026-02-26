@@ -51,6 +51,7 @@ public class SyncEngine {
             if (fullRefresh) {
                 log.info("Full refresh requested, resetting state");
                 state = new SyncState();
+                stateManager.setState(state);
             }
 
             String sourceType = sourceConfig.getType() != null ? sourceConfig.getType().trim().toLowerCase() : "postgres";
@@ -130,7 +131,7 @@ public class SyncEngine {
                     try {
                         // Open writer for the first schema (will handle multi-table in records)
                         writer.open(cdcSchemas.get(0), destinationConfig);
-                        driver.cdcStream(cdcSchemas, writer, state, () -> {});
+                        driver.cdcStream(cdcSchemas, writer, state, this::saveStateQuietly);
                     } finally {
                         writer.close();
                     }
@@ -183,12 +184,20 @@ public class SyncEngine {
             Writer writer = createWriter();
             try {
                 writer.open(schema, destinationConfig);
-                driver.cdcStream(List.of(schema), writer, state, () -> {});
+                driver.cdcStream(List.of(schema), writer, state, this::saveStateQuietly);
             } finally {
                 writer.close();
             }
         } finally {
             driver.close();
+        }
+    }
+
+    private void saveStateQuietly() {
+        try {
+            stateManager.save();
+        } catch (Exception e) {
+            log.warn("Failed to save state: {}", e.getMessage());
         }
     }
 

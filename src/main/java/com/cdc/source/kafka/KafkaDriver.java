@@ -50,7 +50,7 @@ public class KafkaDriver implements Driver {
     }
 
     @Override
-    public void cdcStream(List<CdcSchema> schemas, Writer writer, SyncState state, Runnable shutdownSignal) {
+    public void cdcStream(List<CdcSchema> schemas, Writer writer, SyncState state, Runnable checkpointCallback) {
         if (schemas == null || schemas.isEmpty()) {
             throw new IllegalArgumentException("Kafka CDC requires at least one stream");
         }
@@ -93,23 +93,26 @@ public class KafkaDriver implements Driver {
             waitForAssignmentAndSeek(state, streamId, topic);
 
             long recordCount = 0;
-            long lastFlushTime = System.currentTimeMillis();
+            long lastCheckpointTime = System.currentTimeMillis();
+            long recordsSinceCheckpoint = 0;
+            Map<Integer, Long> maxOffsetByPartition = new HashMap<>();
 
             while (running[0]) {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(config.getPollTimeoutMs()));
                 if (records.isEmpty()) {
                     long now = System.currentTimeMillis();
-                    if (now - lastFlushTime > 5000) {
-                        writer.flush();
-                        lastFlushTime = now;
+                    if (shouldCheckpoint(now, recordsSinceCheckpoint, lastCheckpointTime)) {
+                        checkpoint(writer, state, streamId, topic, maxOffsetByPartition, checkpointCallback);
+                        maxOffsetByPartition = new HashMap<>();
+                        recordsSinceCheckpoint = 0;
+                        lastCheckpointTime = now;
                     }
                     continue;
                 }
 
-                Map<Integer, Long> maxOffsetByPartition = new HashMap<>();
-
                 for (ConsumerRecord<String, String> rec : records) {
                     recordCount++;
+                    recordsSinceCheckpoint++;
 
                     Map<String, Object> data = new HashMap<>();
                     data.put("_kafka_topic", rec.topic());
@@ -142,18 +145,13 @@ public class KafkaDriver implements Driver {
                     }
                 }
 
-                writer.flush();
-                consumer.commitSync();
-                lastFlushTime = System.currentTimeMillis();
-
-                SyncState.StreamState streamState = state.getOrCreateStream(streamId);
-                streamState.setSyncMode("cdc");
-                streamState.setLastSyncTime(Instant.now());
-
-                Map<String, Map<Integer, Long>> offsets = streamState.getKafkaOffsets();
-                if (offsets == null) offsets = new HashMap<>();
-                offsets.put(topic, maxOffsetByPartition);
-                streamState.setKafkaOffsets(offsets);
+                long now = System.currentTimeMillis();
+                if (shouldCheckpoint(now, recordsSinceCheckpoint, lastCheckpointTime)) {
+                    checkpoint(writer, state, streamId, topic, maxOffsetByPartition, checkpointCallback);
+                    maxOffsetByPartition = new HashMap<>();
+                    recordsSinceCheckpoint = 0;
+                    lastCheckpointTime = now;
+                }
             }
         } finally {
             try {
@@ -181,6 +179,27 @@ public class KafkaDriver implements Driver {
             }
         }
         log.warn("Kafka CDC did not receive partition assignment in time; starting with consumer defaults");
+    }
+
+    private boolean shouldCheckpoint(long now, long recordsSinceCheckpoint, long lastCheckpointTime) {
+        if (recordsSinceCheckpoint <= 0) return false;
+        if (recordsSinceCheckpoint >= config.getCheckpointRecords()) return true;
+        return now - lastCheckpointTime >= config.getCheckpointIntervalMs();
+    }
+
+    private void checkpoint(Writer writer, SyncState state, String streamId, String topic, Map<Integer, Long> maxOffsetByPartition, Runnable checkpointCallback) {
+        writer.flush();
+        consumer.commitSync();
+
+        SyncState.StreamState streamState = state.getOrCreateStream(streamId);
+        streamState.setSyncMode("cdc");
+        streamState.setLastSyncTime(Instant.now());
+
+        Map<String, Map<Integer, Long>> offsets = streamState.getKafkaOffsets();
+        if (offsets == null) offsets = new HashMap<>();
+        offsets.put(topic, maxOffsetByPartition);
+        streamState.setKafkaOffsets(offsets);
+        if (checkpointCallback != null) checkpointCallback.run();
     }
 
     private void applySeeksFromState(SyncState state, String streamId, String topic, Set<TopicPartition> assigned) {

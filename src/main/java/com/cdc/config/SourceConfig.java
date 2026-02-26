@@ -33,6 +33,12 @@ public class SourceConfig {
     @JsonProperty("poll_timeout_ms")
     private int pollTimeoutMs = 1000;
 
+    @JsonProperty("checkpoint_interval_ms")
+    private int checkpointIntervalMs = 5000;
+
+    @JsonProperty("checkpoint_records")
+    private int checkpointRecords = 10000;
+
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class ReplicationConfig {
         @JsonProperty("slot_name")
@@ -88,4 +94,8 @@ public class SourceConfig {
     public void setAutoOffsetReset(String autoOffsetReset) { this.autoOffsetReset = autoOffsetReset; }
     public int getPollTimeoutMs() { return pollTimeoutMs; }
     public void setPollTimeoutMs(int pollTimeoutMs) { this.pollTimeoutMs = pollTimeoutMs; }
+    public int getCheckpointIntervalMs() { return checkpointIntervalMs; }
+    public void setCheckpointIntervalMs(int checkpointIntervalMs) { this.checkpointIntervalMs = checkpointIntervalMs; }
+    public int getCheckpointRecords() { return checkpointRecords; }
+    public void setCheckpointRecords(int checkpointRecords) { this.checkpointRecords = checkpointRecords; }
 }

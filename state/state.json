@@ -1,0 +1,18 @@
+{
+  "streams" : {
+    "test-topic.events" : {
+      "sync_mode" : "cdc",
+      "last_lsn" : null,
+      "full_load_completed" : false,
+      "full_load_chunks_done" : 0,
+      "full_load_chunks_total" : 0,
+      "last_sync_time" : "2026-02-26T16:02:56.769786672Z",
+      "kafka_offsets" : {
+        "test-topic" : {
+          "0" : 1019
+        }
+      }
+    }
+  },
+  "global_lsn" : null
+}

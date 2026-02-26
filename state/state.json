@@ -6,10 +6,10 @@
       "full_load_completed" : false,
       "full_load_chunks_done" : 0,
       "full_load_chunks_total" : 0,
-      "last_sync_time" : "2026-02-26T18:07:22.371813084Z",
+      "last_sync_time" : "2026-02-26T18:07:52.606404535Z",
       "kafka_offsets" : {
         "test-topic" : {
-          "0" : 11135586
+          "0" : 11160387
         }
       }
     }
